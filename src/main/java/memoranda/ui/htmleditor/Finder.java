@@ -25,6 +25,7 @@ public class Finder extends Thread {
     String dispText = "";
     String _replace = null;
     HTMLEditor editor;
+    int start;
 
     /**
      * Constructor for Finder.
@@ -75,7 +76,7 @@ public class Finder extends Thread {
         ContinueSearchDialog cdlg = new ContinueSearchDialog(this, dispText);
         boolean replaceAll = false;
         boolean showCdlg = false;
-        int start = 0;
+        start = 0;  /// cyclomatic complexity change 1 - make this variable class global.
         Matcher matcher = pattern.matcher(text);
         while (matcher.find(start)) {
             editor.editor.requestFocus();
@@ -83,17 +84,10 @@ public class Finder extends Thread {
             editor.editor.select(matcher.start(), matcher.end());
             if (_replace != null) {
                 if (!replaceAll) {
-                    ReplaceOptionsDialog dlg = new ReplaceOptionsDialog(Local.getString("Replace this occurence?"));
-                    Dimension dlgSize = new Dimension(400, 150);
-                    dlg.setSize(400, 150);
-                    Dimension frmSize = editor.getParent().getSize();
-                    Point loc = editor.getLocationOnScreen();
-                    dlg.setLocation(
-                        (frmSize.width - dlgSize.width) / 2 + loc.x,
-                        (frmSize.height - dlgSize.height) / 2 + loc.y);
-                    dlg.setModal(true);
-                    dlg.setVisible(true);
-                    int op = dlg.option;
+                	// Cyclomatic complexity change 2 - Make displaying the replace all dialog more modular.  
+                	//  Code should be single purpose.  
+                    int op = displayReplaceAllDialog();
+                    
                     if (op == ReplaceOptionsDialog.YES_OPTION) {
                         editor.editor.replaceSelection(_replace);
                         start = matcher.start() + _replace.length();
@@ -102,6 +96,7 @@ public class Finder extends Thread {
                         editor.editor.replaceSelection(_replace);
                         start = matcher.start() + _replace.length();
                         replaceAll = true;
+                        
                     }
                     else if (op == ReplaceOptionsDialog.CANCEL_OPTION)
                         return;
@@ -114,17 +109,9 @@ public class Finder extends Thread {
                 }
             }
             else {
-                /*int n = JOptionPane.showConfirmDialog(null, "Continue search?", "Find", JOptionPane.YES_NO_OPTION);
-                if (n == JOptionPane.NO_OPTION)
-                    return;*/
-                cdlg.cont = false;
-                cdlg.cancel = false;
-                if (!showCdlg) {
-                    editor.showToolsPanel();
-                    editor.toolsPanel.addTab(Local.getString("Find"), cdlg);
-                    showCdlg = true;
-                }                
-                this.suspend();
+            	// Cyclomatic complexity change 3 - Make displaying the cancel dialog more modular.  
+            	//  Code should be single purpose.  
+                showCdlg = displayCancelDialog(cdlg, showCdlg);
 
                 if (cdlg.cancel) {
                     editor.toolsPanel.remove(cdlg);
@@ -152,6 +139,36 @@ public class Finder extends Thread {
         }
 
     }
+
+	private boolean displayCancelDialog(ContinueSearchDialog cdlg, boolean showCdlg) {
+		/*int n = JOptionPane.showConfirmDialog(null, "Continue search?", "Find", JOptionPane.YES_NO_OPTION);
+		if (n == JOptionPane.NO_OPTION)
+		    return;*/
+		cdlg.cont = false;
+		cdlg.cancel = false;
+		if (!showCdlg) {
+		    editor.showToolsPanel();
+		    editor.toolsPanel.addTab(Local.getString("Find"), cdlg);
+		    showCdlg = true;
+		}                
+		this.suspend();
+		return showCdlg;
+	}
+
+	private int displayReplaceAllDialog() {
+		ReplaceOptionsDialog dlg = new ReplaceOptionsDialog(Local.getString("Replace this occurence?"));
+		Dimension dlgSize = new Dimension(400, 150);
+		dlg.setSize(400, 150);
+		Dimension frmSize = editor.getParent().getSize();
+		Point loc = editor.getLocationOnScreen();
+		dlg.setLocation(
+		    (frmSize.width - dlgSize.width) / 2 + loc.x,
+		    (frmSize.height - dlgSize.height) / 2 + loc.y);
+		dlg.setModal(true);
+		dlg.setVisible(true);
+		int op = dlg.option;
+		return op;
+	}
 
     public void run() {
         findAll();
